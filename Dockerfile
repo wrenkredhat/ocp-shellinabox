@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/rhel7-minimal
+FROM centos:7
 
 MAINTAINER Louis P. Santillan <lpsantil@gmail.com>
 
@@ -9,8 +9,6 @@ USER 0
 
 # Add our init script
 ADD startsiab.sh /opt/startsiab.sh
-# Add our logo
-ADD siab.logo.txt /opt/siab.logo.txt
 # Fix up the Reverse coloring
 ADD black-on-white.css /usr/share/shellinabox/black-on-white.css
 # Add nano syntax highlighting for Dockerfiles
@@ -19,8 +17,6 @@ ADD dockerfile.nanorc /usr/share/nano/dockerfile.nanorc
 ADD javascript.nanorc /usr/share/nano/javascript.nanorc
 # Enable nano syntax highlighting
 ADD nanorc /tmp/nanorc
-# Enable custom motd
-ADD motd /etc/motd
 
 # Install EPEL
 # Install our developer tools (tmux, ansible, nano, vim, bash-completion, wget)
@@ -35,24 +31,18 @@ ADD motd /etc/motd
 RUN echo "" && \
     cat /opt/siab.logo.txt && \
     echo "=== Installing EPEL ===" && \
-    curl -o /tmp/epel.rpm http://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-11.noarch.rpm && \
-    rpm -ivh /tmp/epel.rpm && \
+    yum install -y http://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/e/epel-release-7-11.noarch.rpm && \
     echo "\n=== Installing developer tools ===" && \
-    microdnf \
-       --enablerepo=rhel-7-server-rpms \
-       --enablerepo=rhel-7-server-extras-rpms \
-       --enablerepo=rhel-7-server-optional-rpms \
-       --enablerepo=rhel-7-server-ose-3.11-rpms \
-       --enablerepo=rhel-7-server-devtools-rpms \
-       --enablerepo=rhel-server-rhscl-7-rpms \
-       --enablerepo=epel \
-       install \
-       jq vim screen which hostname passwd tmux nano wget git \
-       bash-completion openssl shellinabox util-linux expect \
-       atomic-openshift-clients \
-    && \
-    microdnf clean all && \
-    cd /tmp && \
+    yum install -y jq vim screen which hostname passwd tmux nano wget git bash-completion openssl shellinabox util-linux expect --enablerepo=epel && \
+    yum clean all && \
+    cd /tmp/ && \
+    echo "\n=== Installing oc ===" && \
+    wget https://github.com/openshift/origin/releases/download/v3.10.0/openshift-origin-client-tools-v3.10.0-dd10d17-linux-64bit.tar.gz && \
+    ls -lah /tmp/ && \
+    echo "\n=== Untar'ing 'oc' ===" && \
+    tar zxvf /tmp/openshift-origin-client-tools-v3.10.0-dd10d17-linux-64bit.tar.gz && \
+    echo "\n=== Copying 'oc' ===" && \
+    mv -v /tmp/openshift-origin-client-tools-v3.10.0-dd10d17-linux-64bit/oc /usr/local/bin/ && \
     echo "\n=== Installing 'developer' user ===" && \
     useradd -u 1001 developer -m && \
     mkdir -pv /home/developer/bin /home/developer/tmp && \
@@ -67,9 +57,7 @@ RUN echo "" && \
     echo "\n=== Removing login's lock file ===" && \
     rm -f /var/run/nologin && \
     echo "*** Done building siab container ***" && \
-    cat /opt/siab.logo.txt && \
-    echo ""
-
+    cat /opt/siab.logo.txt
 
 # shellinabox will listen on 8080
 EXPOSE 8080
